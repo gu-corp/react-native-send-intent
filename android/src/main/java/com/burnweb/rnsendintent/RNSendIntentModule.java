@@ -9,21 +9,31 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Environment;
 import android.os.Parcelable;
 import android.os.PowerManager;
-import android.provider.CalendarContract.Calendars;
-import android.provider.CalendarContract.Events;
 import android.provider.CalendarContract;
+import android.provider.CalendarContract.Events;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
 import android.util.Log;
+
 import androidx.core.content.FileProvider;
+
+import com.facebook.react.bridge.ActivityEventListener;
+import com.facebook.react.bridge.BaseActivityEventListener;
+import com.facebook.react.bridge.Callback;
+import com.facebook.react.bridge.Promise;
+import com.facebook.react.bridge.ReactApplicationContext;
+import com.facebook.react.bridge.ReactContextBaseJavaModule;
+import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.ReadableArray;
+import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.bridge.ReadableMapKeySetIterator;
+import com.facebook.react.bridge.ReadableType;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.SecurityException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -33,26 +43,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.facebook.react.bridge.ActivityEventListener;
-import com.facebook.react.bridge.BaseActivityEventListener;
-import com.facebook.react.bridge.Callback;
-import com.facebook.react.bridge.NativeModule;
-import com.facebook.react.bridge.Promise;
-import com.facebook.react.bridge.ReactApplicationContext;
-import com.facebook.react.bridge.ReactContext;
-import com.facebook.react.bridge.ReactContextBaseJavaModule;
-import com.facebook.react.bridge.ReactMethod;
-import com.facebook.react.bridge.ReadableArray;
-import com.facebook.react.bridge.ReadableMap;
-import com.facebook.react.bridge.ReadableMapKeySetIterator;
-import com.facebook.react.bridge.ReadableType;
-
 import okhttp3.Call;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
-
 import okio.BufferedSink;
 import okio.BufferedSource;
 import okio.Okio;
@@ -587,24 +582,30 @@ public class RNSendIntentModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void openAppWithData(String packageName, String dataUri, String mimeType, ReadableMap extras, final Promise promise) {
-        Uri uri = Uri.parse(dataUri);
-        Intent sendIntent = new Intent(Intent.ACTION_VIEW);
-        if (mimeType != null)
-            sendIntent.setDataAndType(uri, mimeType);
-        else
-            sendIntent.setData(uri);
+        try {
+            Uri uri = Uri.parse(dataUri);
+            Intent sendIntent = new Intent(Intent.ACTION_VIEW);
+            if (mimeType != null)
+                sendIntent.setDataAndType(uri, mimeType);
+            else
+                sendIntent.setData(uri);
 
-        sendIntent.setPackage(packageName);
+            sendIntent.setPackage(packageName);
 
-        if (!parseExtras(extras, sendIntent)) {
+            if (!parseExtras(extras, sendIntent)) {
+                promise.resolve(false);
+                return;
+            }
+
+            //sendIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+            sendIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            this.reactContext.startActivity(sendIntent);
+            promise.resolve(true);
+        } catch(Exception e) {
+            // e.printStackTrace();
             promise.resolve(false);
-            return;
         }
 
-        //sendIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-        sendIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        this.reactContext.startActivity(sendIntent);
-        promise.resolve(true);
     }
 
     @ReactMethod
